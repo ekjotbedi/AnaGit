@@ -23,12 +23,12 @@ const SyncLog = require('../models/SyncLog');
 
 const router = express.Router();
 
-// Everything in here requires being signed in.
+// The user has to sign in to access the app
 router.use(requireAuth);
 
-/**
- * GET /api/repos
- * List the repositories the current user has added to AnaGit.
+/*
+ GET /api/repos
+ Lists the repositories the current user has added to AnaGit.
  */
 router.get(
   '/',
@@ -40,10 +40,9 @@ router.get(
   })
 );
 
-/**
- * POST /api/repos   body: { fullName: "owner/name" }
- * Add a repository to analyze. We verify the user can actually see it on
- * GitHub, store it, and kick off the first sync in the background.
+/*
+ POST /api/repos   body: { fullName: "owner/name" }
+ Add a repository to analyze.
  */
 router.post(
   '/',
@@ -91,9 +90,9 @@ router.post(
   })
 );
 
-/**
- * GET /api/repos/:id
- * Repository details as we currently have them stored.
+/*
+ GET /api/repos/:id
+ Repository details as we currently have them stored.
  */
 router.get(
   '/:id',
@@ -103,10 +102,9 @@ router.get(
   })
 );
 
-/**
- * POST /api/repos/:id/sync
- * Trigger a re-sync. By default it runs in the background; pass
- * ?wait=true to block until it finishes (useful for testing).
+/*
+ POST /api/repos/:id/sync
+ Trigger a re-sync. By default it runs in the background;
  */
 router.post(
   '/:id/sync',
@@ -126,9 +124,9 @@ router.post(
   })
 );
 
-/**
- * GET /api/repos/:id/sync-logs
- * Recent sync history for a repo.
+/*
+ GET /api/repos/:id/sync-logs
+ Recent sync history for a repo.
  */
 router.get(
   '/:id/sync-logs',
@@ -142,9 +140,9 @@ router.get(
   })
 );
 
-/**
- * DELETE /api/repos/:id
- * Remove a repo and all of its analyzed data.
+/*
+ DELETE /api/repos/:id
+ Remove a repo and all of its analyzed data.
  */
 router.delete(
   '/:id',
