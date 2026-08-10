@@ -8,9 +8,9 @@ const logger = require('./utils/logger');
 
 /*
  Application entry point:
-  1. validate configuration
+  1. validate configuration (fail fast on missing env vars)
   2. connect to MongoDB
-  3. build the Express app
+  3. build the Express app (session store reuses the DB connection)
   4. start listening
   5. start the background job scheduler
   6. shut everything down cleanly on Ctrl-C / termination
@@ -23,7 +23,9 @@ async function start() {
 
     const app = createApp();
     const server = app.listen(config.port, () => {
-      logger.info(`AnaGit backend listening on http://localhost:${config.port}`);
+      logger.info(`AnaGit is running on http://localhost:${config.port}`);
+      logger.info(`  dashboard → http://localhost:${config.port}/`);
+      logger.info(`  API       → http://localhost:${config.port}/api`);
       logger.info(`Environment: ${config.env}`);
     });
 
@@ -49,7 +51,7 @@ async function start() {
   }
 }
 
-// Catch anything we forgot to handle so the process doesn't die silently.
+// Catch anything that is unhandled, so the process doesn't die silently.
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection:', reason);
 });
