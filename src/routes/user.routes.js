@@ -9,9 +9,9 @@ const User = require('../models/User');
 
 const router = express.Router();
 
-/**
- * GET /api/me
- * Returns the currently signed-in user's profile (never the token).
+/*
+ GET /api/me
+ Returns the currently signed-in user's profile.
  */
 router.get(
   '/',
@@ -37,11 +37,10 @@ router.get(
   })
 );
 
-/**
- * GET /api/me/github/repos
- * Lists the repositories the signed-in user can access on GitHub, so the
- * frontend can show a picker for "add a repo to analyze". This is a live,
- * paginated call to GitHub (demonstrates pagination end-to-end).
+/*
+ GET /api/me/github/repos
+ Lists the repositories the signed-in user can access on GitHub, so the
+ frontend can show a picker for "add a repo to analyze".
  */
 router.get(
   '/github/repos',
@@ -51,7 +50,7 @@ router.get(
     const gh = new GitHubClient(decrypt(owner.accessToken));
     const repos = await gh.getUserRepos();
 
-    // Return a trimmed shape — we don't need GitHub's full payload here.
+    // Return a trimmed shape
     res.json(
       repos.map((r) => ({
         githubId: r.id,
