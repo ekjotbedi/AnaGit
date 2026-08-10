@@ -15,22 +15,22 @@ const CommitActivity = require('../models/CommitActivity');
 const RepoSnapshot = require('../models/RepoSnapshot');
 const SyncLog = require('../models/SyncLog');
 
-/**
- * The "background processing" heart of AnaGit. A sync fetches the latest
- * data for one repository from GitHub and writes it into our database so
- * we can compute historical statistics from it later.
- *
- * Syncs are triggered:
- *   • when a repo is first added,
- *   • manually from the API,
- *   • on a schedule (node-cron), and
- *   • by incoming webhooks.
- *
- * The `syncStatus` field on the repository acts as a simple lock so two
- * syncs of the same repo never run at once.
+/*
+ The "background processing" heart of AnaGit. A sync fetches the latest
+ data for one repository from GitHub and writes it into the database so
+  we can compute historical statistics from it later.
+ 
+ Syncs are triggered:
+   • when a repo is first added,
+   • manually from the API,
+   • on a schedule (node-cron), and
+   • by incoming webhooks.
+ 
+  The `syncStatus` field on the repository acts as a simple lock so two
+  syncs of the same repo never run at once.
  */
 
-/** Build a GitHub client using the repo owner's stored (encrypted) token. */
+// Build a GitHub client
 async function clientForRepo(repo) {
   const owner = await User.findById(repo.addedBy).select('+accessToken');
   if (!owner || !owner.accessToken) {
@@ -39,13 +39,12 @@ async function clientForRepo(repo) {
   return new GitHubClient(decrypt(owner.accessToken));
 }
 
-/**
- * Run a full sync for one repository document.
- * Returns the finished SyncLog (or null if it was skipped because a sync
- * was already in progress).
+/*
+ Run a full sync for one repository document.
+ Returns the finished SyncLog (or null if it was skipped).
  */
 async function syncRepository(repo, { triggeredBy = 'manual' } = {}) {
-  // --- Lock: skip if this repo is already syncing.
+  // skip if this repo is already syncing.
   if (repo.syncStatus === 'syncing') {
     logger.info(`Sync skipped for ${repo.fullName} — already in progress`);
     return null;
@@ -70,7 +69,7 @@ async function syncRepository(repo, { triggeredBy = 'manual' } = {}) {
     const fullName = repo.fullName;
     logger.info(`Syncing ${fullName} (triggered by ${triggeredBy})...`);
 
-    // 1) Repository metadata (stars, forks, default branch, etc.)
+    // Repository metadata (stars, forks, default branch, etc)
     const repoData = await gh.getRepo(fullName);
     repo.description = repoData.description;
     repo.htmlUrl = repoData.html_url;
@@ -82,22 +81,22 @@ async function syncRepository(repo, { triggeredBy = 'manual' } = {}) {
     repo.watchers = repoData.subscribers_count ?? repoData.watchers_count ?? 0;
     repo.openIssuesCount = repoData.open_issues_count;
 
-    // 2) Languages → compute percentages.
+    // Languages → compute percentages
     itemsProcessed += await syncLanguages(gh, repo);
 
-    // 3) Issues & pull requests (paginated).
+    // Issues & pull requests
     itemsProcessed += await syncIssues(gh, repo);
 
-    // 4) Individual commits (incremental where possible).
+    // Individual commits
     itemsProcessed += await syncCommits(gh, repo);
 
-    // 5) Weekly commit activity (stats endpoint).
+    // Weekly commit activity
     itemsProcessed += await syncCommitActivity(gh, repo);
 
-    // 6) Contributor statistics (stats endpoint).
+    // Contributor statistics
     itemsProcessed += await syncContributors(gh, repo);
 
-    // 7) Write a historical snapshot of the key numbers.
+    // Historical snapshot of the key numbers
     await writeSnapshot(repo);
 
     repo.lastSyncedAt = new Date();
@@ -128,7 +127,7 @@ async function syncRepository(repo, { triggeredBy = 'manual' } = {}) {
 }
 
 async function syncLanguages(gh, repo) {
-  const languages = await gh.getLanguages(repo.fullName); // { JavaScript: 12345, ... }
+  const languages = await gh.getLanguages(repo.fullName);
   const entries = Object.entries(languages || {});
   const totalBytes = entries.reduce((sum, [, bytes]) => sum + bytes, 0);
 
@@ -152,7 +151,6 @@ async function syncLanguages(gh, repo) {
 async function syncIssues(gh, repo) {
   const issues = await gh.getIssues(repo.fullName, { state: 'all' });
 
-  // Upsert each issue/PR. Using bulkWrite is far faster than N awaits.
   const ops = issues.map((raw) => ({
     updateOne: {
       filter: { repo: repo._id, number: raw.number },
@@ -214,7 +212,7 @@ async function syncCommits(gh, repo) {
 }
 
 async function syncCommitActivity(gh, repo) {
-  const weeks = await gh.getWeeklyCommitActivity(repo.fullName); // [{ week, total, days }]
+  const weeks = await gh.getWeeklyCommitActivity(repo.fullName);
   if (!Array.isArray(weeks) || weeks.length === 0) return 0;
 
   const ops = weeks.map((w) => ({
@@ -274,7 +272,7 @@ async function syncContributors(gh, repo) {
   return stats.length;
 }
 
-/** Compute current totals from our DB and store one historical snapshot. */
+// Compute current totals from DB and store one historical snapshot.
 async function writeSnapshot(repo) {
   const [openIssues, closedIssues, openPRs, closedPRs, totalCommits, contributorsCount] =
     await Promise.all([
@@ -301,11 +299,7 @@ async function writeSnapshot(repo) {
   });
 }
 
-/**
- * Fire-and-forget helper: run a sync in the background without blocking
- * the HTTP response. Errors are swallowed here because syncRepository
- * already records them on the repo and in the SyncLog.
- */
+//run a sync in the background without blocking the HTTP response.
 function syncRepositoryInBackground(repo, opts) {
   setImmediate(() => {
     syncRepository(repo, opts).catch((err) =>
@@ -314,13 +308,11 @@ function syncRepositoryInBackground(repo, opts) {
   });
 }
 
-/** Sync every repository we track (used by the scheduled cron job). */
+// Sync every repository we track.
 async function syncAllRepositories({ triggeredBy = 'scheduled' } = {}) {
   const repos = await Repository.find({});
   logger.info(`Scheduled sync starting for ${repos.length} repositories`);
   for (const repo of repos) {
-    // Sequential (not parallel) to be gentle on the rate limit.
-    // eslint-disable-next-line no-await-in-loop
     await syncRepository(repo, { triggeredBy });
   }
   logger.info('Scheduled sync finished');
