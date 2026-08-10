@@ -2,18 +2,17 @@
 /*
  End-to-end smoke test.
  Boots the REAL AnaGit server against a throwaway in-memory MongoDB and
- exercises real HTTP endpoints plus the statistics aggregations
- (no GitHub credentials or external database required.)
- 
+ exercises real HTTP endpoints plus the statistics aggregations 
     npm run smoke
  */
+
 const crypto = require('crypto');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 let failures = 0;
 function check(name, cond, extra) {
   if (cond) {
-    console.log(` ${name}`);
+    console.log(`${name} successful `);
   } else {
     failures += 1;
     console.error(`${name}`, extra !== undefined ? JSON.stringify(extra) : '');
@@ -23,9 +22,7 @@ function check(name, cond, extra) {
 (async () => {
   const mem = await MongoMemoryServer.create();
 
-  // Environment must be set before requiring the app config.
   process.env.MONGODB_URI = mem.getUri();
-
   process.env.SESSION_SECRET = 'test-session-secret';
   process.env.TOKEN_ENCRYPTION_KEY =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -45,16 +42,47 @@ function check(name, cond, extra) {
   const base = 'http://127.0.0.1:4123';
 
   try {
-    // --- Health / info ---
+    // info
     let r = await fetch(`${base}/api/health`);
     let j = await r.json();
     check('GET /api/health -> 200', r.status === 200, r.status);
     check('health reports db connected', j.db === 'connected', j);
 
+    // The dashboard UI is served by this same app
     r = await fetch(`${base}/`);
-    check('GET / -> 200', r.status === 200, r.status);
+    const html = await r.text();
+    const ctype = (h) => (h.headers.get('content-type') || '');
+    check(
+      'GET / serves the dashboard HTML',
+      r.status === 200 && ctype(r).includes('text/html') && html.includes('anaGit'),
+      { status: r.status, type: ctype(r) }
+    );
 
-    // --- Auth gating ---
+    // The CSP must allow what the page actually loads, or the UI renders broken.
+    const csp = r.headers.get('content-security-policy') || '';
+    check('CSP allows the Chart.js CDN', csp.includes('cdn.jsdelivr.net'), csp);
+    check('CSP allows inline style attributes', csp.includes("'unsafe-inline'"), csp);
+    check('CSP allows GitHub avatars', csp.includes('githubusercontent.com'), csp);
+
+    r = await fetch(`${base}/js/app.js`);
+    check('GET /js/app.js -> 200 javascript',
+      r.status === 200 && ctype(r).includes('javascript'), { status: r.status, type: ctype(r) });
+    r = await fetch(`${base}/css/styles.css`);
+    check('GET /css/styles.css -> 200 css',
+      r.status === 200 && ctype(r).includes('css'), { status: r.status, type: ctype(r) });
+
+    // Extension-less, non-API paths fall back to index.html 
+    r = await fetch(`${base}/some/deep/link`);
+    check('extension-less path falls back to index.html',
+      r.status === 200 && ctype(r).includes('text/html'), { status: r.status, type: ctype(r) });
+    r = await fetch(`${base}/js/does-not-exist.js`);
+    check('missing asset -> 404', r.status === 404, r.status);
+
+    r = await fetch(`${base}/api`);
+    j = await r.json();
+    check('GET /api -> API info JSON', r.status === 200 && j.name === 'AnaGit API', { status: r.status, j });
+
+    // Auth gating
     r = await fetch(`${base}/api/me`);
     check('GET /api/me (no session) -> 401', r.status === 401, r.status);
     r = await fetch(`${base}/api/repos`);
@@ -62,11 +90,11 @@ function check(name, cond, extra) {
     r = await fetch(`${base}/api/repos/abc123/overview`);
     check('GET analytics (no session) -> 401', r.status === 401, r.status);
 
-    // --- Unknown route ---
+    // Unknown routes
     r = await fetch(`${base}/api/nope`);
     check('unknown route -> 404', r.status === 404, r.status);
 
-    // --- Webhook signature verification ---
+    // Webhook signature verification
     r = await fetch(`${base}/api/webhooks/github`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-GitHub-Event': 'ping', 'X-GitHub-Delivery': 'd1' },
@@ -89,7 +117,7 @@ function check(name, cond, extra) {
     j = await r.json();
     check('webhook with valid signature (ping) -> pong', r.status === 200 && j.message === 'pong', { status: r.status, j });
 
-    // --- Seed data + exercise the real MongoDB aggregation pipelines ---
+    // Seed data + exercising the real MongoDB aggregation pipelines
     const User = require('../src/models/User');
     const Repository = require('../src/models/Repository');
     const Issue = require('../src/models/Issue');
