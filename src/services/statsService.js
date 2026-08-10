@@ -8,15 +8,10 @@ const LanguageStat = require('../models/LanguageStat');
 const CommitActivity = require('../models/CommitActivity');
 const RepoSnapshot = require('../models/RepoSnapshot');
 
-/**
- * Read-side service: turns the raw rows we've stored into the meaningful
- * statistics the dashboard displays. Most of the heavy lifting is done by
- * MongoDB aggregation pipelines so the database does the counting, not us.
- */
 
-/** High-level overview: current counts plus how they've trended over time. */
+// High-level overview: current counts plus how they've trended over time.
 async function getOverview(repoId) {
-  // Group issues/PRs into open/closed counts in a single DB pass.
+  // Group issues into open/closed counts in a single DB pass.
   const [counts] = await Issue.aggregate([
     { $match: { repo: repoId } },
     {
@@ -72,7 +67,7 @@ async function getOverview(repoId) {
   };
 }
 
-/** Weekly commit activity series (oldest → newest). */
+// Weekly commit activity series (oldest → newest)
 async function getCommitActivity(repoId) {
   const weeks = await CommitActivity.find({ repo: repoId })
     .sort({ weekStart: 1 })
@@ -84,14 +79,14 @@ async function getCommitActivity(repoId) {
   }));
 }
 
-/** Language breakdown with percentages. */
+// Language breakdown with percentage
 async function getLanguages(repoId) {
   const stat = await LanguageStat.findOne({ repo: repoId }).lean();
   if (!stat) return { totalBytes: 0, languages: [] };
   return { totalBytes: stat.totalBytes, languages: stat.languages, capturedAt: stat.capturedAt };
 }
 
-/** Most active contributors, ranked by commit count. */
+// Most active contributors, ranked by commit count.
 async function getTopContributors(repoId, limit = 10) {
   return Contributor.find({ repo: repoId })
     .sort({ commits: -1 })
@@ -99,10 +94,7 @@ async function getTopContributors(repoId, limit = 10) {
     .lean();
 }
 
-/**
- * "Stale" / inactive issues: still open and not touched in `days` days.
- * We also compute how many days each one has been idle.
- */
+// "Stale" / inactive issues: still open and not touched in `days` days.
 async function getStaleIssues(repoId, days = config.sync.staleIssueDays) {
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const issues = await Issue.find({
@@ -130,7 +122,7 @@ async function getStaleIssues(repoId, days = config.sync.staleIssueDays) {
   };
 }
 
-/** Label distribution across issues/PRs (how many carry each label). */
+// Label distribution across issues/PRs (how many carry each label)
 async function getLabelDistribution(repoId) {
   return Issue.aggregate([
     { $match: { repo: repoId } },
@@ -141,7 +133,7 @@ async function getLabelDistribution(repoId) {
   ]);
 }
 
-/** Paginated list of issues/PRs with optional filters. */
+// Paginated list of issues/PRs with optional filters.
 async function getIssues(repoId, { type, state, label, page = 1, limit = 20 } = {}) {
   const filter = { repo: repoId };
   if (type === 'issue') filter.isPullRequest = false;
