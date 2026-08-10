@@ -3,13 +3,12 @@
 const statsService = require('./statsService');
 const Repository = require('../models/Repository');
 
-/**
- * Builds exportable reports for a repository, in JSON or CSV.
- * JSON gives a full report; CSV gives one flat table for a chosen section
- * (handy for opening in Excel / Google Sheets).
+/*
+ Builds exportable reports for a repository, in JSON or CSV.
+ JSON gives a full report; CSV gives one flat table for a chosen section
  */
 
-/** Assemble a complete report object from the stored statistics. */
+// Assemble a complete report object from the stored statistics.
 async function buildReport(repoId) {
   const repo = await Repository.findById(repoId).lean();
   const [overview, commitActivity, languages, contributors, staleIssues, labels] =
@@ -42,14 +41,14 @@ async function buildReport(repoId) {
   };
 }
 
-/** Turn an array of flat objects into a CSV string (no dependencies). */
+// Turn an array of flat objects into a CSV string.
 function toCsv(rows) {
   if (!rows || rows.length === 0) return '';
   const headers = Object.keys(rows[0]);
   const escape = (value) => {
     if (value === null || value === undefined) return '';
     const str = String(value);
-    // Quote values containing commas, quotes, or newlines (CSV rules).
+    // Quote values containing commas, quotes, or newlines.
     if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
     return str;
   };
@@ -60,9 +59,9 @@ function toCsv(rows) {
   return lines.join('\n');
 }
 
-/**
- * Produce a CSV for one section of the report.
- * Supported sections: contributors | commit-activity | languages | stale-issues
+/*
+  Produce a CSV for one section of the report.
+  Supported sections: contributors | commit-activity | languages | stale-issues
  */
 async function buildCsv(repoId, section) {
   switch (section) {
