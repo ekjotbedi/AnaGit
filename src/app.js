@@ -1,11 +1,11 @@
 'use strict';
 
+const path = require('path');
 const express = require('express');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
-const cors = require('cors');
 const morgan = require('morgan');
 
 const { config } = require('./config');
@@ -17,37 +17,46 @@ const repoRoutes = require('./routes/repo.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const exportRoutes = require('./routes/export.routes');
 const webhookRoutes = require('./routes/webhook.routes');
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
-/*
- Build and configure the Express application.
- export a factory (rather than a ready-made app) so the caller can
- connect to MongoDB first — the session store reuses that connection.
- */
 function createApp() {
   const app = express();
 
-  // Behind a proxy (e.g. in production), trusted so secure cookies work.
   if (config.isProd) app.set('trust proxy', 1);
 
-  // --- Security & logging ---
-  app.use(helmet());
+  // Security headers
   app.use(
-    cors({
-      origin: config.clientUrl,
-      credentials: true, // allow the session cookie to be sent
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https://*.githubusercontent.com'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'self'"],
+        },
+      },
     })
   );
   if (!config.isProd) app.use(morgan('dev'));
 
-  // --- Webhooks: MUST be registered before the JSON body parser, because
-  //     signature verification needs the raw, unmodified request body. ---
+  // Browser UI
+  // Registered before the session middleware so requests for CSS/JS don't
+  // do needless session lookups
+  app.use(express.static(PUBLIC_DIR));
+
+  // Webhooks: MUST be registered before the JSON body parser, because
+  // signature verification needs raw, unmodified request body
   app.use('/api/webhooks', express.raw({ type: '*/*' }), webhookRoutes);
 
-  // --- Body parsing for everything else ---
+  // Body parsing
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // --- Sessions ---
+  // Sessions (stored in MongoDB)
   app.use(
     session({
       name: 'anagit.sid',
@@ -56,10 +65,10 @@ function createApp() {
       saveUninitialized: false,
       store: MongoStore.create({
         client: mongoose.connection.getClient(),
-        ttl: 7 * 24 * 60 * 60, // 7 days, in seconds
+        ttl: 7 * 24 * 60 * 60, 
       }),
       cookie: {
-        httpOnly: true,
+        httpOnly: true, 
         secure: config.isProd,
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -67,33 +76,46 @@ function createApp() {
     })
   );
 
-  // --- Health & info ---
+  // Health & info
   app.get('/api/health', (req, res) => {
     res.json({
       status: 'ok',
-      service: 'anagit-backend',
+      service: 'anagit',
       time: new Date().toISOString(),
       db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     });
   });
-  app.get('/', (req, res) => {
+  // "/" now serves the dashboard, so the API's info payload lives at /api.
+  app.get('/api', (req, res) => {
     res.json({
       name: 'AnaGit API',
-      message: 'GitHub Engineering Analytics Dashboard — backend',
-      docs: 'See README.md for the full list of endpoints.',
+      message: 'GitHub Engineering Analytics Dashboard',
+      ui: '/',
+      docs: 'See docs/api.md for the full list of endpoints.',
     });
   });
 
-  // --- API routes ---
+  // API routes
   app.use('/api/auth', authRoutes);
   app.use('/api/me', userRoutes);
+  // Order matters: the more specific export path is registered first.
   app.use('/api/repos/:id/export', exportRoutes);
   app.use('/api/repos', repoRoutes);
   app.use('/api/repos/:id', analyticsRoutes);
+
+  // UI fallback
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    if (req.path === '/api' || req.path.startsWith('/api/')) return next();
+    if (path.extname(req.path)) return next();
+    res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  });
+
+  // 404 + error handling
   app.use(notFoundHandler);
   app.use(errorHandler);
 
   return app;
 }
 
-module.exports = { createApp };
+module.exports = { createApp, PUBLIC_DIR };
