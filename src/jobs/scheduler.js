@@ -5,10 +5,15 @@ const { config } = require('../config');
 const logger = require('../utils/logger');
 const { syncAllRepositories } = require('../services/syncService');
 const cacheService = require('../services/cacheService');
+
+/*
+ Background processing without any extra infrastructure: node-cron runs
+ scheduled jobs inside the same Node process.
+ */
 const tasks = [];
 
 function startScheduler() {
-  // Validate the cron expression so typo fails at startup itself
+  // Validate the cron expression so any typo fails at startup.
   if (!cron.validate(config.sync.cron)) {
     logger.error(`Invalid SYNC_CRON expression: "${config.sync.cron}" — skipping scheduled sync`);
   } else {
