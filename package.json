@@ -1,12 +1,12 @@
 {
-  "name": "anagit-backend",
+  "name": "anagit",
   "version": "1.0.0",
-  "description": "AnaGit — GitHub Engineering Analytics Dashboard (backend API)",
+  "description": "AnaGit — GitHub Engineering Analytics Dashboard (API + dashboard served as one app)",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "dev": "nodemon --watch src src/server.js",
     "check": "node scripts/check-syntax.js",
     "smoke": "node scripts/smoke-test.js"
   },
@@ -15,7 +15,9 @@
     "analytics",
     "oauth",
     "express",
-    "mongodb"
+    "mongodb",
+    "dashboard",
+    "chartjs"
   ],
   "author": "",
   "license": "MIT",
@@ -24,7 +26,6 @@
   },
   "dependencies": {
     "connect-mongo": "^5.1.0",
-    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
