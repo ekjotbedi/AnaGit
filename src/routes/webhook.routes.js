@@ -11,13 +11,6 @@ const { syncRepositoryInBackground } = require('../services/syncService');
 
 const router = express.Router();
 
-/**
- * Verify GitHub's HMAC signature (X-Hub-Signature-256) over the RAW
- * request body. This proves the request really came from GitHub and
- * wasn't forged. `req.body` here is a Buffer because this route is
- * mounted with express.raw() in app.js (JSON parsing would change the
- * bytes and break the signature).
- */
 function verifySignature(req) {
   const signature = req.get('X-Hub-Signature-256');
   if (!signature) return false;
@@ -26,19 +19,18 @@ function verifySignature(req) {
     'sha256=' +
     crypto
       .createHmac('sha256', config.github.webhookSecret)
-      .update(req.body) // raw Buffer
+      .update(req.body)
       .digest('hex');
 
   const sigBuf = Buffer.from(signature);
   const expBuf = Buffer.from(expected);
-  // timingSafeEqual throws if lengths differ, so guard first.
   if (sigBuf.length !== expBuf.length) return false;
   return crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
-/**
- * POST /api/webhooks/github
- * Receives webhook deliveries from GitHub. We verify, record, and react.
+/*
+ POST /api/webhooks/github
+ Receives webhook deliveries from GitHub.
  */
 router.post(
   '/github',
@@ -59,7 +51,7 @@ router.post(
 
     const repoFullName = payload.repository ? payload.repository.full_name : undefined;
 
-    // Record the delivery (idempotent: duplicate deliveryId is ignored).
+    // Record the delivery.
     try {
       await WebhookEvent.create({
         deliveryId,
@@ -75,14 +67,13 @@ router.post(
       });
     } catch (err) {
       if (err.code === 11000) {
-        // Duplicate delivery — GitHub retried. Acknowledge and stop.
+        // Duplicate delivery — GitHub retried.
         return res.json({ message: 'Duplicate delivery ignored' });
       }
       throw err;
     }
 
-    // React: if this event changes repo data and we track that repo,
-    // trigger a background re-sync so our stats stay fresh.
+    // If this event changes repo data and we track that repo, trigger a background re-sync so our stats stay fresh.
     const actionable = ['push', 'issues', 'pull_request', 'issue_comment'];
     if (actionable.includes(eventType) && repoFullName) {
       const repos = await Repository.find({ fullName: repoFullName });
@@ -92,7 +83,7 @@ router.post(
       logger.info(`Webhook ${eventType} for ${repoFullName} → triggered ${repos.length} sync(s)`);
     }
 
-    // Acknowledge quickly — GitHub expects a fast 2xx response.
+    // Acknowledge
     res.json({ message: 'Received' });
   })
 );
