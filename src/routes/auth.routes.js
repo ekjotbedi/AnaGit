@@ -11,10 +11,9 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
-/**
- * GET /api/auth/github
- * Step 1 of OAuth: send the browser to GitHub to approve access.
- * We stash a random `state` in the session to defend against CSRF.
+/*
+ GET /api/auth/github
+ Step 1 of OAuth: send the browser to GitHub to approve access.
  */
 router.get('/github', (req, res) => {
   const state = oauthService.generateState();
@@ -22,18 +21,16 @@ router.get('/github', (req, res) => {
   res.redirect(oauthService.getAuthorizeUrl(state));
 });
 
-/**
- * GET /api/auth/github/callback
- * Step 2: GitHub redirects here with `code` and `state`. We verify the
- * state, exchange the code for a token, fetch the user's real GitHub
- * profile, upsert them, and start a session.
+/*
+ GET /api/auth/github/callback
+ Step 2: GitHub redirects here with `code` and `state`
  */
 router.get(
   '/github/callback',
   asyncHandler(async (req, res) => {
     const { code, state, error, error_description: errorDescription } = req.query;
 
-    // The user may have denied access on GitHub's screen.
+    // If user denies access on GitHub's screen.
     if (error) {
       throw new AppError(`GitHub authorization failed: ${errorDescription || error}`, 400);
     }
@@ -77,14 +74,13 @@ router.get(
     req.session.userId = user._id.toString();
     logger.info(`User signed in: ${user.login} (#${user.githubId})`);
 
-    // Send the browser back to the dashboard, served by this same app.
     res.redirect('/');
   })
 );
 
-/**
- * POST /api/auth/logout
- * Destroys the session.
+/*
+ POST /api/auth/logout
+ Destroys the session.
  */
 router.post('/logout', (req, res) => {
   req.session.destroy((err) => {
