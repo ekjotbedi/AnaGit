@@ -16,7 +16,6 @@ const config = {
   env: env('NODE_ENV', { fallback: 'development' }),
   isProd: env('NODE_ENV', { fallback: 'development' }) === 'production',
   port: parseInt(env('PORT', { fallback: '4000' }), 10),
-  clientUrl: env('CLIENT_URL', { fallback: 'http://localhost:5173' }),
 
   mongoUri: env('MONGODB_URI', { required: true }),
   sessionSecret: env('SESSION_SECRET', { required: true }),
@@ -50,10 +49,7 @@ const config = {
   },
 };
 
-/*
- Validate configuration on startup. Fail fast with a clear message,
- so we never spend an hour debugging a broken app.
-*/
+// Validating configuration on startup...fail fast with a clear message
 function validateConfig() {
   if (missing.length > 0) {
     throw new Error(
