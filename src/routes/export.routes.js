@@ -10,13 +10,12 @@ const router = express.Router({ mergeParams: true });
 
 router.use(requireAuth, loadOwnedRepo);
 
-/**
- * GET /api/repos/:id/export?format=json
- * GET /api/repos/:id/export?format=csv&section=contributors
- *
- * JSON returns a full report. CSV returns one flat table for a chosen
- * section (contributors | commit-activity | languages | stale-issues).
- * Both are sent as file downloads.
+/*
+ GET /api/repos/:id/export?format=json
+ GET /api/repos/:id/export?format=csv&section=contributors
+ 
+ JSON returns a full report. CSV returns one flat table for a chosen section
+ Both are sent as file downloads.
  */
 router.get(
   '/',
