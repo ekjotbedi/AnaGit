@@ -151,8 +151,6 @@ Content-Type: application/json
 
 { "fullName": "facebook/react" }
 
----
-
 ```
 
 Then on the GitHub repo: **Settings → Webhooks → Add webhook**:
