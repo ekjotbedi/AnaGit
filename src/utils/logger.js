@@ -1,10 +1,5 @@
 'use strict';
 
-/**
- * A tiny logger. In a bigger app you'd reach for winston or pino, but
- * for a learning project a thin wrapper over console keeps things clear
- * and dependency-free. Every line is timestamped and level-tagged.
- */
 function timestamp() {
   return new Date().toISOString();
 }
