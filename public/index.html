@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>anaGit — analyse your GitHub account</title>
+  <meta name="description" content="AnaGit — GitHub engineering analytics dashboard" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0c10'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%233fb950' font-family='monospace'>&gt;_</text></svg>" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- login screen -->
+  <section id="view-login" class="login hidden">
+    <div class="login-card">
+      <div class="login-logo mono">&gt;_ anaGit</div>
+      <p class="login-tagline mono" id="login-tagline"></p>
+      <button class="btn btn-github" id="btn-login">
+        <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        Sign in with GitHub
+      </button>
+      <p class="login-note">
+        Login runs entirely through GitHub OAuth — AnaGit never sees a password.
+        Requested scopes: <code>read:user</code>, <code>repo</code>.
+      </p>
+      <p class="login-note dim">Server: <code id="login-api-url"></code></p>
+    </div>
+  </section>
+
+  <!-- app shell -->
+  <div id="view-app" class="app hidden">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo mono">anaGit <span class="logo-sub">Analyse your GitHub account</span></div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-heading">
+          <span class="mono">TRACKED REPOS</span>
+          <button class="icon-btn" id="btn-add-repo" title="Add repository (from your GitHub)"><span class="mono">+</span></button>
+        </div>
+        <nav id="repo-list" class="repo-list"><!-- repo items injected --></nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="api-health" id="api-health">
+          <span class="dot dot-gray"></span><span class="mono">api: checking…</span>
+        </div>
+        <div class="user-chip" id="user-chip"><!-- injected --></div>
+      </div>
+    </aside>
+
+    <!-- main column  -->
+    <main class="main">
+      <header class="topbar">
+        <div class="crumbs mono" id="topbar-crumbs">~/</div>
+        <button class="palette-hint" id="btn-palette" title="Command palette">
+          <span>Jump to…</span><kbd class="mono">Ctrl K</kbd>
+        </button>
+      </header>
+
+      <!-- empty state: signed in, no repos yet -->
+      <section id="view-empty" class="empty hidden">
+        <div class="empty-card">
+          <div class="mono empty-prompt">$ anagit add <span class="cursor"></span></div>
+          <h2>No repositories tracked yet</h2>
+          <p>Pick any repo you can access on GitHub. AnaGit will pull its issues,
+             pull requests, commits, languages and contributors into MongoDB and
+             start building historical statistics.</p>
+          <button class="btn btn-primary" id="btn-add-repo-empty">+ Add your first repository</button>
+        </div>
+      </section>
+
+      <!-- repo dashboard -->
+      <section id="view-repo" class="repo-view hidden">
+
+        <div class="repo-header">
+          <div class="repo-title-block">
+            <div class="repo-owner mono" id="repo-owner">owner /</div>
+            <div class="repo-name-row">
+              <h1 class="repo-name mono" id="repo-name">name</h1><span class="cursor"></span>
+              <span id="repo-badges"></span>
+            </div>
+            <div class="repo-desc" id="repo-desc"></div>
+          </div>
+          <div class="repo-side">
+            <div class="repo-stats mono" id="repo-stats"></div>
+            <div class="repo-actions">
+              <span class="sync-badge" id="sync-badge"></span>
+              <button class="btn btn-primary btn-sm" id="btn-sync">⟳ Sync now</button>
+              <a class="btn btn-ghost btn-sm" id="btn-open-github" target="_blank" rel="noopener">Open on GitHub ↗</a>
+              <button class="btn btn-danger-ghost btn-sm" id="btn-delete" title="Remove repo and all analyzed data">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <nav class="tabs" id="tabs">
+          <button class="tab active" data-tab="overview">Overview</button>
+          <button class="tab" data-tab="issues">Issues &amp; PRs</button>
+          <button class="tab" data-tab="stale">Stale issues <span class="tab-pill hidden" id="stale-pill"></span></button>
+          <button class="tab" data-tab="contributors">Contributors</button>
+          <button class="tab" data-tab="sync">Sync &amp; export</button>
+        </nav>
+
+        <div class="tab-body" id="tab-body"><!-- tab content injected --></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- modals -->
+  <div class="modal-backdrop hidden" id="modal-backdrop"></div>
+
+  <div class="modal hidden" id="modal-picker">
+    <div class="modal-head">
+      <h3>Add a repository</h3>
+      <button class="icon-btn" data-close-modal>✕</button>
+    </div>
+    <p class="modal-sub">Live from the GitHub API (paginated) — every repo your account can access.</p>
+    <input type="text" id="picker-search" class="input" placeholder="Filter repositories…" autocomplete="off" />
+    <div class="picker-list" id="picker-list"><div class="skeleton-rows"></div></div>
+  </div>
+
+  <div class="modal modal-sm hidden" id="modal-confirm">
+    <div class="modal-head"><h3 id="confirm-title">Are you sure?</h3></div>
+    <p class="modal-sub" id="confirm-text"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn btn-danger" id="confirm-yes">Delete</button>
+    </div>
+  </div>
+
+  <!-- command palette -->
+  <div class="palette hidden" id="palette">
+    <input type="text" id="palette-input" class="palette-input mono" placeholder="Type a command or repo name…" autocomplete="off" />
+    <div class="palette-results" id="palette-results"></div>
+    <div class="palette-foot mono"><kbd>↑↓</kbd> navigate · <kbd>↵</kbd> run · <kbd>esc</kbd> close</div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <!-- scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/demo.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/palette.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
