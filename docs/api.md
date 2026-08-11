@@ -153,14 +153,6 @@ Content-Type: application/json
 
 ---
 
-## Webhooks (optional but part of the project)
-
-GitHub needs a public URL to deliver webhooks to your local machine. Use a
-tunnel such as [ngrok](https://ngrok.com) or `cloudflared`:
-
-```bash
-ngrok http 4000
-# gives you e.g. https://abcd-1234.ngrok-free.app
 ```
 
 Then on the GitHub repo: **Settings → Webhooks → Add webhook**:
@@ -171,26 +163,6 @@ Then on the GitHub repo: **Settings → Webhooks → Add webhook**:
 
 When GitHub sends events, AnaGit verifies the signature, records the delivery,
 and re-syncs the affected repo automatically.
-
----
-
-## How the "hard parts" work
-
-- **Caching + rate limits.** Every GitHub GET is cached in the `CacheEntry`
-  collection with its `ETag`. While fresh (`CACHE_TTL_SECONDS`), responses are
-  served with **no network call**. Once stale, we re-ask GitHub *conditionally*
-  (`If-None-Match`); a `304 Not Modified` reply costs **zero** rate-limit budget.
-  If we ever do exhaust the limit, the client reads `x-ratelimit-reset` and waits
-  (up to `MAX_RATE_LIMIT_WAIT_MS`) instead of hammering the API.
-- **Pagination.** `GitHubClient.paginate()` walks pages by following the `Link`
-  header's `rel="next"`, capped by `MAX_PAGES` for safety.
-- **Background processing.** `node-cron` re-syncs every tracked repo on a
-  schedule (`SYNC_CRON`, default every 6h) and prunes old cache rows nightly.
-  Route- and webhook-triggered syncs run in the background too; the repo's
-  `syncStatus` acts as a lock so two syncs never overlap.
-- **Historical statistics.** Each sync writes a `RepoSnapshot` row. Because we
-  keep every snapshot, `/overview` can return a **trend over time** — something a
-  single live API call could never show.
 
 ---
 
