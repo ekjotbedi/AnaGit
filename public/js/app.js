@@ -1,15 +1,9 @@
 'use strict';
 
-/**
- * AnaGit mission control — main application.
- *
- * A small hand-rolled SPA: state + render functions, no framework.
- * Reads exclusively from the AnaGit backend API (see js/api.js).
- */
 (() => {
   const { $, $$, esc, compact, timeAgo, shortDate } = UI;
 
-  // ── application state ───────────────────────────────────────
+  // application state
   const state = {
     user: null,
     repos: [],
@@ -32,7 +26,7 @@
     return n + ' B';
   }
 
-  // ══════════════════════ BOOT ══════════════════════
+  // boot
   async function boot() {
     if (CONFIG.DEMO) {
       const banner = document.createElement('div');
@@ -70,7 +64,7 @@
     await loadRepos();
   }
 
-  // ── login screen typing animation ───────────────────────────
+  // login screen typing animation
   function initLoginTagline() {
     const phrases = [
       'engineering analytics for your GitHub repos',
@@ -117,7 +111,7 @@
     });
   }
 
-  // ══════════════════════ SIDEBAR / REPO LIST ══════════════════════
+  // repo list
   async function loadRepos(selectId) {
     state.repos = await API.repos();
     renderRepoList();
@@ -162,7 +156,7 @@
     );
   }
 
-  // ══════════════════════ REPO SELECTION ══════════════════════
+  // repository selection
   function selectRepo(id) {
     state.currentRepoId = id;
     localStorage.setItem('anagit_last_repo', id);
@@ -223,8 +217,8 @@
     }
   }
 
-  // ══════════════════════ SYNC POLLING ══════════════════════
-  /** While a repo is syncing, poll it so the UI updates itself live. */
+  // sync polling
+  // While a repo is syncing, polling it so the UI updates itself live
   function startPolling() {
     stopPolling();
     const id = state.currentRepoId;
@@ -250,7 +244,7 @@
           }
         }
       } catch {
-        /* transient poll error — try again next tick */
+        // transient poll error
       }
     }, CONFIG.POLL_MS);
   }
@@ -260,8 +254,8 @@
     state.pollTimer = null;
   }
 
-  // ══════════════════════ DATA CACHE ══════════════════════
-  /** Fetch (once) everything the overview needs; reused across tabs. */
+  // data cache
+  // Fetching everything the overview needs; reused across tabs.
   async function repoData(id) {
     if (state.cache.has(id)) return state.cache.get(id);
     const [overview, activity, languages, labels, contributors] = await Promise.all([
@@ -276,7 +270,7 @@
     return data;
   }
 
-  // ══════════════════════ TABS ══════════════════════
+  // tabs
   const TAB_RENDERERS = {
     overview: renderOverview,
     issues: renderIssues,
@@ -295,8 +289,7 @@
     }
     Charts.destroyAll();
 
-    // A repo that is doing its FIRST sync has no stored stats yet —
-    // show a live progress hero instead of empty cards.
+    // A repo that is doing its FIRST sync has no stored stats yet, live progress instead of empty cards.
     if (repo && repo.syncStatus === 'syncing' && !repo.lastSyncedAt) {
       $('#tab-body').innerHTML = `
         <div class="syncing-hero">
@@ -314,13 +307,11 @@
           <div class="mono">✕ ${esc(err.message)}</div>
           <button class="btn btn-ghost btn-sm" id="btn-error-reload">Reload</button>
         </div>`;
-      // Bound here rather than an inline onclick= attribute, which the
-      // Content-Security-Policy (script-src-attr 'none') would block.
       $('#btn-error-reload').addEventListener('click', () => location.reload());
     });
   }
 
-  // ══════════════════════ TAB: OVERVIEW ══════════════════════
+  // tab: overview
   async function renderOverview() {
     const body = $('#tab-body');
     body.innerHTML = `<div class="grid">
@@ -462,7 +453,7 @@
     if (goStale) goStale.addEventListener('click', (e) => { e.preventDefault(); setTab('stale'); });
   }
 
-  // ══════════════════════ TAB: ISSUES & PRS ══════════════════════
+  // tab: issues and PR
   async function renderIssues() {
     const body = $('#tab-body');
     const f = state.issuesFilters;
@@ -559,7 +550,7 @@
       </tbody></table>`;
   }
 
-  // ══════════════════════ TAB: STALE ISSUES ══════════════════════
+  // stale issues
   async function renderStale() {
     const body = $('#tab-body');
     body.innerHTML = `
@@ -605,7 +596,7 @@
       </tbody></table>`;
   }
 
-  // ══════════════════════ TAB: CONTRIBUTORS ══════════════════════
+  // contributors
   async function renderContributors() {
     const body = $('#tab-body');
     body.innerHTML = `
@@ -651,7 +642,7 @@
       </tbody></table>`;
   }
 
-  // ══════════════════════ TAB: SYNC & EXPORT ══════════════════════
+  // sync and export
   async function renderSyncTab() {
     const body = $('#tab-body');
     const id = state.currentRepoId;
@@ -729,7 +720,7 @@
       <div class="sync-list">${rows}</div>`;
   }
 
-  // ══════════════════════ ACTIONS ══════════════════════
+  // actions
   async function doSync() {
     const repo = currentRepo();
     if (!repo) return;
@@ -765,7 +756,7 @@
     }
   }
 
-  // ── add-repo picker ─────────────────────────────────────────
+  // repo picker
   async function openPicker() {
     UI.openModal('modal-picker');
     $('#picker-search').value = '';
@@ -817,7 +808,7 @@
           const res = await API.addRepo(fullName);
           UI.toast(`${fullName} added`, 'success', 'Initial sync started in the background.');
           await loadRepos(res.repo._id);
-          startPolling(); // first sync is running — watch it live
+          startPolling(); // first sync is running
         } catch (err) {
           UI.toast('Could not add repository', 'error', err.message);
         }
@@ -825,7 +816,7 @@
     });
   }
 
-  // ══════════════════════ COMMAND PALETTE ITEMS ══════════════════════
+  // command palette
   function paletteItems() {
     const items = [];
     for (const r of state.repos) {
@@ -851,7 +842,7 @@
     return items;
   }
 
-  // ══════════════════════ STATIC EVENT WIRING ══════════════════════
+  // static event writing
   function initStaticEvents() {
     $('#btn-login').addEventListener('click', () => { location.href = API.loginUrl(); });
     $('#btn-add-repo').addEventListener('click', openPicker);
