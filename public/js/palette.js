@@ -1,11 +1,11 @@
 'use strict';
 
-/**
- * Command palette (Ctrl/Cmd + K) — hand-rolled, no library.
- *
- * The app registers a provider function that returns the currently
- * available commands (repos to jump to, tabs, actions). The palette
- * filters them as you type and runs the selected one.
+/*
+  Command palette (Ctrl/Cmd + K) — hand-rolled, no library.
+ 
+ The app registers a provider function that returns the currently
+ available commands (repos to jump to, tabs, actions). The palette
+ filters them as you type and runs the selected one.
  */
 const Palette = (() => {
   let provider = () => [];
