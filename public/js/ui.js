@@ -1,14 +1,13 @@
 'use strict';
 
-/**
- * Small DOM / formatting helpers shared by every view.
- * No framework: just focused utilities.
+/*
+ Small DOM / formatting helpers shared by every view.
  */
 const UI = (() => {
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-  /** Escape untrusted text before inserting into innerHTML templates. */
+  // Escape untrusted text before inserting into innerHTML templates.
   function esc(str) {
     return String(str ?? '')
       .replace(/&/g, '&amp;')
@@ -17,7 +16,7 @@ const UI = (() => {
       .replace(/"/g, '&quot;');
   }
 
-  /** 4213 -> "4.2k", 1200000 -> "1.2M" */
+  // 4213 -> "4.2k", 1200000 -> "1.2M"
   function compact(n) {
     if (n === null || n === undefined) return '—';
     if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -25,7 +24,7 @@ const UI = (() => {
     return String(n);
   }
 
-  /** "2m ago" / "3h ago" / "5d ago" */
+  // "2m ago" / "3h ago" / "5d ago"
   function timeAgo(date) {
     if (!date) return 'never';
     const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -41,10 +40,7 @@ const UI = (() => {
     return new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
-  /**
-   * GitHub's real language colors (the same ones behind the colored dots
-   * on every repo page), with a stable hashed fallback for anything else.
-   */
+  // GitHub's real language colors.
   const LANG_COLORS = {
     JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
     Java: '#b07219', C: '#555555', 'C++': '#f34b7d', 'C#': '#178600',
@@ -80,7 +76,7 @@ const UI = (() => {
     return `<span class="avatar-fallback" style="width:${size}px;height:${size}px;background:${c}33;border-color:${c}66">${esc(initials)}</span>`;
   }
 
-  // ── toasts ──────────────────────────────────────────────────
+  // toasts
   function toast(message, type = 'info', sub = '') {
     const el = document.createElement('div');
     el.className = `toast toast-${type}`;
@@ -93,7 +89,7 @@ const UI = (() => {
     }, 4200);
   }
 
-  // ── modals ──────────────────────────────────────────────────
+  // modals
   function openModal(id) {
     $('#modal-backdrop').classList.remove('hidden');
     $(`#${id}`).classList.remove('hidden');
@@ -103,7 +99,7 @@ const UI = (() => {
     $$('.modal').forEach((m) => m.classList.add('hidden'));
   }
 
-  /** Promise-based confirm dialog (replaces window.confirm, keeps the theme). */
+  // Promise-based confirm dialog.
   function confirmDialog(title, text) {
     return new Promise((resolve) => {
       $('#confirm-title').textContent = title;
