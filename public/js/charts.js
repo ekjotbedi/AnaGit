@@ -1,14 +1,9 @@
 'use strict';
 
-/**
- * Chart builders (Chart.js) tuned for the mission-control theme.
- * Instances are tracked per-canvas so re-rendering a tab never leaks
- * or double-draws.
- */
 const Charts = (() => {
   const instances = new Map();
 
-  // Dark theme defaults for every chart.
+  // dark theme defaults for every chart.
   if (window.Chart) {
     Chart.defaults.color = '#8b96a5';
     Chart.defaults.borderColor = '#212936';
@@ -44,15 +39,15 @@ const Charts = (() => {
   const RED = '#f85149';
   const RED_SOFT = 'rgba(248,81,73,0.55)';
 
-  /**
-   * Weekly commit activity as bars.
-   * Coloring rule (the "green positive / red negative" ask):
-   *   green  — this week had at least as many commits as the previous week
-   *   red    — commit output DROPPED vs the previous week
-   * The tooltip spells out the week-over-week delta.
+  /*
+   Weekly commit activity as bars.
+   Coloring rule (the "green positive / red negative" ask):
+      green  — this week had at least as many commits as the previous week
+      red    — commit output DROPPED vs the previous week
+   The tooltip spells out the week-over-week delta.
    */
   function commitActivity(canvasId, weeks) {
-    const recent = weeks.slice(-26); // last ~6 months keeps it readable
+    const recent = weeks.slice(-26);
     const labels = recent.map((w) => UI.shortDate(w.weekStart));
     const totals = recent.map((w) => w.total);
     const colors = totals.map((t, i) =>
@@ -101,9 +96,9 @@ const Charts = (() => {
     });
   }
 
-  /**
-   * Commits by day of week — the `days` arrays from GitHub's stats
-   * endpoint (index 0 = Sunday), summed across all stored weeks.
+  /*
+   Commits by day of week — the `days` arrays from GitHub's stats
+   endpoint (index 0 = Sunday), summed across all stored weeks.
    */
   function weekdayDistribution(canvasId, weeks) {
     const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -138,11 +133,6 @@ const Charts = (() => {
     });
   }
 
-  /**
-   * Historical trend — one line per metric, drawn from the RepoSnapshot
-   * rows the backend writes on every sync. This is data a live GitHub
-   * call could never give you.
-   */
   function trend(canvasId, snapshots) {
     const labels = snapshots.map((s) => UI.shortDate(s.capturedAt));
     const mk = (label, key, color, extra = {}) => ({
@@ -164,8 +154,6 @@ const Charts = (() => {
         datasets: [
           mk('Open issues', 'openIssues', '#d29922'),
           mk('Open PRs', 'openPullRequests', '#bc8cff'),
-          // Commits live on their own right-hand axis — their scale would
-          // otherwise flatten the issue/PR lines into the floor.
           mk('Total commits', 'totalCommits', GREEN, { borderDash: [5, 4], yAxisID: 'y1' }),
         ],
       },
