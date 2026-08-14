@@ -1,11 +1,10 @@
 'use strict';
 
-/**
- * DEMO MODE (open the app with ?demo=1)
- *
- * Wraps window.fetch and answers AnaGit API calls with realistic seeded
- * data, so the full UI can be demonstrated with no backend, no MongoDB
- * and no GitHub OAuth app. Nothing here runs in normal mode.
+/*
+ DEMO MODE (open the app with ?demo=1)
+ Wraps window.fetch and answers AnaGit API calls with realistic seeded
+ data, so the full UI can be demonstrated with no backend, no MongoDB
+ and no GitHub OAuth app.
  */
 (() => {
   if (!CONFIG.DEMO) return;
@@ -13,7 +12,7 @@
   const DAY = 24 * 60 * 60 * 1000;
   const now = Date.now();
 
-  // ── seeded repos ────────────────────────────────────────────
+  // seeded repos
   const repos = [
     {
       _id: 'demo-repo-1', githubId: 101, owner: 'nova-labs', name: 'ion-engine',
@@ -37,7 +36,7 @@
     },
   ];
 
-  // ── commit activity: 26 weeks with believable rises and drops ──
+  // commit activity: 26 weeks with believable rises and drops
   const weeklyTotals = [12, 18, 15, 22, 26, 19, 31, 28, 35, 24, 29, 38, 33, 41, 36, 30, 44, 39, 47, 42, 35, 51, 46, 40, 55, 49];
   const activity = weeklyTotals.map((total, i) => {
     const weekStart = new Date(now - (26 - i) * 7 * DAY);
@@ -52,7 +51,7 @@
     return { weekStart: weekStart.toISOString(), total, days };
   });
 
-  // ── historical snapshots (the trend) ────────────────────────
+  // historical snapshots
   // Kept consistent with the seeded issues list below (29 open / 14
   // closed issues, 9 open / 5 closed PRs) so the KPI deltas make sense.
   const trend = Array.from({ length: 12 }, (_, i) => ({
@@ -162,7 +161,7 @@
     scopes: ['read:user', 'repo'], lastLoginAt: new Date(now - 40 * 60 * 1000).toISOString(),
   };
 
-  // ── request router ──────────────────────────────────────────
+  // request router
   const overview = () => ({
     issues: {
       open: issues.filter((i) => !i.isPullRequest && i.state === 'open').length,
