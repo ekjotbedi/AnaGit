@@ -232,7 +232,7 @@
 
         if (fresh.syncStatus !== 'syncing') {
           stopPolling();
-          state.cache.delete(id); // stored stats changed — refetch
+          state.cache.delete(id); // stored stats changed
           if (fresh.syncStatus === 'error') {
             UI.toast('Sync failed', 'error', fresh.syncError || '');
           } else {
@@ -255,7 +255,7 @@
   }
 
   // data cache
-  // Fetching everything the overview needs; reused across tabs.
+  // Fetching everything the overview needs
   async function repoData(id) {
     if (state.cache.has(id)) return state.cache.get(id);
     const [overview, activity, languages, labels, contributors] = await Promise.all([
@@ -289,7 +289,7 @@
     }
     Charts.destroyAll();
 
-    // A repo that is doing its FIRST sync has no stored stats yet, live progress instead of empty cards.
+    // A repo that is doing its FIRST sync has no stored stats yet, showing live progress instead of empty cards.
     if (repo && repo.syncStatus === 'syncing' && !repo.lastSyncedAt) {
       $('#tab-body').innerHTML = `
         <div class="syncing-hero">
